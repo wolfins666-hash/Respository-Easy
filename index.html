@@ -1,0 +1,43 @@
+<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><title>Privates 3D-Haus</title><style>html,body{margin:0;height:100%;overflow:hidden;background:#05070b;color:#fff;font-family:system-ui,Segoe UI,Arial}#c{width:100vw;height:100vh;display:block;background:#111}.hud{position:fixed;left:14px;top:12px;background:rgba(0,0,0,.45);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.16);border-radius:14px;padding:10px 12px;font-size:13px;line-height:1.45;max-width:340px}.hint{position:fixed;right:14px;top:12px;background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.16);border-radius:14px;padding:10px 12px;font-size:13px}.btn{position:fixed;right:14px;bottom:14px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:999px;padding:11px 14px;color:white;font-weight:700}.joy{position:fixed;border-radius:50%;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);display:none}.joy.l{left:24px;bottom:34px;width:124px;height:124px}.joy.r{right:24px;bottom:34px;width:124px;height:124px}@media(pointer:coarse){.joy{display:block}.hud{font-size:12px}}</style></head><body><canvas id="c"></canvas><div class="hud"><b>Privates Haus-Walkthrough</b><br>WASD laufen · Maus umsehen · Shift sprinten<br>R: Regen/Dach an/aus · H: Hilfe an/aus<br><span id="room">Raum: Eingangsbereich</span></div><div class="hint" id="hint">Klicke ins Bild für Maussteuerung.</div><div class="joy l"></div><div class="joy r"></div><button class="btn" onclick="toggleRoof()">Dach</button><script>
+const canvas=document.getElementById('c'),ctx=canvas.getContext('2d');let W,H;function fit(){W=canvas.width=innerWidth*devicePixelRatio;H=canvas.height=innerHeight*devicePixelRatio;ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);W=innerWidth;H=innerHeight}addEventListener('resize',fit);fit();
+const map=[
+'########################',
+'#....#.............#...#',
+'#....#..bbbb.......#...#',
+'#....#..b..b.......#...#',
+'#....#..bbbb.......#...#',
+'#....#.............#...#',
+'#....#######..######...#',
+'#......................#',
+'#..sssss.....ttt.......#',
+'#..s...s.....t.t.......#',
+'#..sssss.....ttt...cc..#',
+'#..................cc..#',
+'#....######..######....#',
+'#....#............#....#',
+'#....#..kkkkkk....#....#',
+'#....#..k....k....#....#',
+'#....#..kkkkkk....#....#',
+'#....#............#....#',
+'#....######..######....#',
+'#......................#',
+'#..dddd..ppp....wwww...#',
+'#..d..d..p.p....w..w...#',
+'#..dddd..ppp....wwww...#',
+'########################'];
+const mh=map.length,mw=map[0].length;let p={x:3.5,y:20.5,a:-.75,vx:0,vy:0};let keys={},roof=true,showHelp=true;const solid=c=>c=='#';
+const colors={wall:'#b78c63',floor:'#6d563f',ceil:'#2b3344',wood:'#8b5a2b',rug:'#7d2534',green:'#425b39'};
+const names=[['Flur',0,0,24,8],['Wohnzimmer',1,7,12,13],['Küche',12,7,23,13],['Schlafzimmer',1,13,12,19],['Bad & Arbeitszimmer',12,13,23,19],['Gartenblick / Terrasse',1,19,23,23]];
+function roomName(){for(const r of names)if(p.x>=r[1]&&p.y>=r[2]&&p.x<r[3]&&p.y<r[4])return r[0];return 'Haus'}
+function shade(hex,f){let n=parseInt(hex.slice(1),16),r=n>>16,g=n>>8&255,b=n&255;return`rgb(${r*f|0},${g*f|0},${b*f|0})`}
+function cast(angle){let sin=Math.sin(angle),cos=Math.cos(angle),dist=0,hit=' ',hx=p.x,hy=p.y;while(dist<22){dist+=.035;hx=p.x+cos*dist;hy=p.y+sin*dist;let x=hx|0,y=hy|0;if(x<0||y<0||x>=mw||y>=mh||solid(map[y][x])){hit='#';break}}return{d:dist,h:hit,x:hx,y:hy}}
+function draw3d(){let grad=ctx.createLinearGradient(0,0,0,H);grad.addColorStop(0,roof?'#172033':'#5f87bc');grad.addColorStop(.52,roof?'#293246':'#a8c8e8');grad.addColorStop(.53,'#5b4736');grad.addColorStop(1,'#2b261f');ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);let fov=Math.PI/3,cols=Math.ceil(W/3);for(let i=0;i<cols;i++){let ang=p.a-fov/2+fov*i/cols;let r=cast(ang),d=r.d*Math.cos(ang-p.a),hh=Math.min(H,H/(d*.54));let x=i*3,y=(H-hh)/2;let light=Math.max(.25,1-d/18);let stripe=((r.x*2|0)+(r.y*2|0))%2?1:.88;ctx.fillStyle=shade(colors.wall,light*stripe);ctx.fillRect(x,y,3.5,hh);if(d<4){ctx.fillStyle=`rgba(255,245,210,${.08*(4-d)})`;ctx.fillRect(x,y,3.5,hh)}}}
+const objs=[];for(let y=0;y<mh;y++)for(let x=0;x<mw;x++){let c=map[y][x];if('bstckdpw'.includes(c))objs.push({x:x+.5,y:y+.5,c});}
+function drawObjects(){let list=objs.map(o=>({...o,dx:o.x-p.x,dy:o.y-p.y})).map(o=>({...o,d:Math.hypot(o.dx,o.dy),ang:Math.atan2(o.dy,o.dx)-p.a})).filter(o=>Math.cos(o.ang)>0&&Math.abs(((o.ang+Math.PI)%(2*Math.PI))-Math.PI)<1.2).sort((a,b)=>b.d-a.d);for(const o of list){let a=((o.ang+Math.PI)%(2*Math.PI))-Math.PI;let sx=W/2+Math.tan(a)*W*.8,sz=Math.min(H*.55,H/(o.d*.9));let sy=H/2-sz*.22,w=sz*.65;let col={b:'#6b4b2f',s:'#5a2d2d',t:'#9b713e',c:'#334e6b',k:'#7a6a4a',d:'#563d28',p:'#806b89',w:'#315b75'}[o.c]||'#777';ctx.fillStyle='rgba(0,0,0,.25)';ctx.beginPath();ctx.ellipse(sx,H/2+sz*.48,w*.52,sz*.12,0,0,7);ctx.fill();ctx.fillStyle=col;roundRect(sx-w/2,sy,w,sz*.7,8,true);ctx.fillStyle='rgba(255,255,255,.16)';ctx.fillRect(sx-w*.35,sy+sz*.09,w*.7,sz*.06);if(o.c=='w'){ctx.fillStyle='#a9d6ff';ctx.fillRect(sx-w*.32,sy+sz*.12,w*.64,sz*.34)}if(o.c=='k'){ctx.fillStyle='#222';ctx.fillRect(sx-w*.2,sy+sz*.16,w*.4,sz*.12)}}}
+function roundRect(x,y,w,h,r,f){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);if(f)ctx.fill()}
+function mini(){let s=Math.min(180,W*.22),ox=W-s-18,oy=H-s-18,cs=s/mw;ctx.fillStyle='rgba(0,0,0,.45)';ctx.fillRect(ox-8,oy-8,s+16,s+16);for(let y=0;y<mh;y++)for(let x=0;x<mw;x++){let c=map[y][x];ctx.fillStyle=c=='#'?'#caa37b':('bstckdpw'.includes(c)?'#9ac':'rgba(255,255,255,.06)');ctx.fillRect(ox+x*cs,oy+y*cs,cs,cs)}ctx.fillStyle='#ffdf6e';ctx.beginPath();ctx.arc(ox+p.x*cs,oy+p.y*cs,4,0,7);ctx.fill();ctx.strokeStyle='#ffdf6e';ctx.beginPath();ctx.moveTo(ox+p.x*cs,oy+p.y*cs);ctx.lineTo(ox+(p.x+Math.cos(p.a)*1.2)*cs,oy+(p.y+Math.sin(p.a)*1.2)*cs);ctx.stroke()}
+function update(dt){let sp=(keys.Shift?.5:.28)*dt*60,fx=Math.cos(p.a),fy=Math.sin(p.a),rx=Math.cos(p.a+Math.PI/2),ry=Math.sin(p.a+Math.PI/2),mx=0,my=0;if(keys.w||keys.ArrowUp){mx+=fx;my+=fy}if(keys.s||keys.ArrowDown){mx-=fx;my-=fy}if(keys.a){mx-=rx;my-=ry}if(keys.d){mx+=rx;my+=ry}let l=Math.hypot(mx,my)||1,nx=p.x+mx/l*sp,ny=p.y+my/l*sp;if(!solid(map[p.y|0][nx|0]))p.x=nx;if(!solid(map[ny|0][p.x|0]))p.y=ny;document.getElementById('room').textContent='Raum: '+roomName()}
+let last=performance.now();function loop(t){let dt=Math.min(.04,(t-last)/1000);last=t;update(dt);draw3d();drawObjects();mini();requestAnimationFrame(loop)}requestAnimationFrame(loop);
+addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;if(e.key=='Shift')keys.Shift=true;if(e.key.toLowerCase()=='r')toggleRoof();if(e.key.toLowerCase()=='h'){showHelp=!showHelp;document.querySelector('.hud').style.display=showHelp?'block':'none';document.getElementById('hint').style.display=showHelp?'block':'none'}});addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false;if(e.key=='Shift')keys.Shift=false});canvas.onclick=()=>canvas.requestPointerLock&&canvas.requestPointerLock();addEventListener('mousemove',e=>{if(document.pointerLockElement===canvas)p.a+=e.movementX*.0025});function toggleRoof(){roof=!roof}
+let touches={};addEventListener('touchstart',e=>{for(const t of e.changedTouches)touches[t.identifier]={x:t.clientX,y:t.clientY,sx:t.clientX,sy:t.clientY}}, {passive:false});addEventListener('touchmove',e=>{e.preventDefault();for(const t of e.changedTouches){let o=touches[t.identifier];if(!o)continue;let dx=t.clientX-o.sx,dy=t.clientY-o.sy;if(o.sx<W/2){keys.w=dy<-18;keys.s=dy>18;keys.a=dx<-18;keys.d=dx>18}else{p.a+=dx*.004;o.sx=t.clientX}}},{passive:false});addEventListener('touchend',e=>{keys.w=keys.s=keys.a=keys.d=false;for(const t of e.changedTouches)delete touches[t.identifier]});
+</script></body></html>
