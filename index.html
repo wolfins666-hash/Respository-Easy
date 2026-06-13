@@ -1,43 +1,117 @@
-<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><title>Privates 3D-Haus</title><style>html,body{margin:0;height:100%;overflow:hidden;background:#05070b;color:#fff;font-family:system-ui,Segoe UI,Arial}#c{width:100vw;height:100vh;display:block;background:#111}.hud{position:fixed;left:14px;top:12px;background:rgba(0,0,0,.45);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.16);border-radius:14px;padding:10px 12px;font-size:13px;line-height:1.45;max-width:340px}.hint{position:fixed;right:14px;top:12px;background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.16);border-radius:14px;padding:10px 12px;font-size:13px}.btn{position:fixed;right:14px;bottom:14px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:999px;padding:11px 14px;color:white;font-weight:700}.joy{position:fixed;border-radius:50%;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);display:none}.joy.l{left:24px;bottom:34px;width:124px;height:124px}.joy.r{right:24px;bottom:34px;width:124px;height:124px}@media(pointer:coarse){.joy{display:block}.hud{font-size:12px}}</style></head><body><canvas id="c"></canvas><div class="hud"><b>Privates Haus-Walkthrough</b><br>WASD laufen · Maus umsehen · Shift sprinten<br>R: Regen/Dach an/aus · H: Hilfe an/aus<br><span id="room">Raum: Eingangsbereich</span></div><div class="hint" id="hint">Klicke ins Bild für Maussteuerung.</div><div class="joy l"></div><div class="joy r"></div><button class="btn" onclick="toggleRoof()">Dach</button><script>
-const canvas=document.getElementById('c'),ctx=canvas.getContext('2d');let W,H;function fit(){W=canvas.width=innerWidth*devicePixelRatio;H=canvas.height=innerHeight*devicePixelRatio;ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);W=innerWidth;H=innerHeight}addEventListener('resize',fit);fit();
-const map=[
-'########################',
-'#....#.............#...#',
-'#....#..bbbb.......#...#',
-'#....#..b..b.......#...#',
-'#....#..bbbb.......#...#',
-'#....#.............#...#',
-'#....#######..######...#',
-'#......................#',
-'#..sssss.....ttt.......#',
-'#..s...s.....t.t.......#',
-'#..sssss.....ttt...cc..#',
-'#..................cc..#',
-'#....######..######....#',
-'#....#............#....#',
-'#....#..kkkkkk....#....#',
-'#....#..k....k....#....#',
-'#....#..kkkkkk....#....#',
-'#....#............#....#',
-'#....######..######....#',
-'#......................#',
-'#..dddd..ppp....wwww...#',
-'#..d..d..p.p....w..w...#',
-'#..dddd..ppp....wwww...#',
-'########################'];
-const mh=map.length,mw=map[0].length;let p={x:3.5,y:20.5,a:-.75,vx:0,vy:0};let keys={},roof=true,showHelp=true;const solid=c=>c=='#';
-const colors={wall:'#b78c63',floor:'#6d563f',ceil:'#2b3344',wood:'#8b5a2b',rug:'#7d2534',green:'#425b39'};
-const names=[['Flur',0,0,24,8],['Wohnzimmer',1,7,12,13],['Küche',12,7,23,13],['Schlafzimmer',1,13,12,19],['Bad & Arbeitszimmer',12,13,23,19],['Gartenblick / Terrasse',1,19,23,23]];
-function roomName(){for(const r of names)if(p.x>=r[1]&&p.y>=r[2]&&p.x<r[3]&&p.y<r[4])return r[0];return 'Haus'}
-function shade(hex,f){let n=parseInt(hex.slice(1),16),r=n>>16,g=n>>8&255,b=n&255;return`rgb(${r*f|0},${g*f|0},${b*f|0})`}
-function cast(angle){let sin=Math.sin(angle),cos=Math.cos(angle),dist=0,hit=' ',hx=p.x,hy=p.y;while(dist<22){dist+=.035;hx=p.x+cos*dist;hy=p.y+sin*dist;let x=hx|0,y=hy|0;if(x<0||y<0||x>=mw||y>=mh||solid(map[y][x])){hit='#';break}}return{d:dist,h:hit,x:hx,y:hy}}
-function draw3d(){let grad=ctx.createLinearGradient(0,0,0,H);grad.addColorStop(0,roof?'#172033':'#5f87bc');grad.addColorStop(.52,roof?'#293246':'#a8c8e8');grad.addColorStop(.53,'#5b4736');grad.addColorStop(1,'#2b261f');ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);let fov=Math.PI/3,cols=Math.ceil(W/3);for(let i=0;i<cols;i++){let ang=p.a-fov/2+fov*i/cols;let r=cast(ang),d=r.d*Math.cos(ang-p.a),hh=Math.min(H,H/(d*.54));let x=i*3,y=(H-hh)/2;let light=Math.max(.25,1-d/18);let stripe=((r.x*2|0)+(r.y*2|0))%2?1:.88;ctx.fillStyle=shade(colors.wall,light*stripe);ctx.fillRect(x,y,3.5,hh);if(d<4){ctx.fillStyle=`rgba(255,245,210,${.08*(4-d)})`;ctx.fillRect(x,y,3.5,hh)}}}
-const objs=[];for(let y=0;y<mh;y++)for(let x=0;x<mw;x++){let c=map[y][x];if('bstckdpw'.includes(c))objs.push({x:x+.5,y:y+.5,c});}
-function drawObjects(){let list=objs.map(o=>({...o,dx:o.x-p.x,dy:o.y-p.y})).map(o=>({...o,d:Math.hypot(o.dx,o.dy),ang:Math.atan2(o.dy,o.dx)-p.a})).filter(o=>Math.cos(o.ang)>0&&Math.abs(((o.ang+Math.PI)%(2*Math.PI))-Math.PI)<1.2).sort((a,b)=>b.d-a.d);for(const o of list){let a=((o.ang+Math.PI)%(2*Math.PI))-Math.PI;let sx=W/2+Math.tan(a)*W*.8,sz=Math.min(H*.55,H/(o.d*.9));let sy=H/2-sz*.22,w=sz*.65;let col={b:'#6b4b2f',s:'#5a2d2d',t:'#9b713e',c:'#334e6b',k:'#7a6a4a',d:'#563d28',p:'#806b89',w:'#315b75'}[o.c]||'#777';ctx.fillStyle='rgba(0,0,0,.25)';ctx.beginPath();ctx.ellipse(sx,H/2+sz*.48,w*.52,sz*.12,0,0,7);ctx.fill();ctx.fillStyle=col;roundRect(sx-w/2,sy,w,sz*.7,8,true);ctx.fillStyle='rgba(255,255,255,.16)';ctx.fillRect(sx-w*.35,sy+sz*.09,w*.7,sz*.06);if(o.c=='w'){ctx.fillStyle='#a9d6ff';ctx.fillRect(sx-w*.32,sy+sz*.12,w*.64,sz*.34)}if(o.c=='k'){ctx.fillStyle='#222';ctx.fillRect(sx-w*.2,sy+sz*.16,w*.4,sz*.12)}}}
-function roundRect(x,y,w,h,r,f){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);if(f)ctx.fill()}
-function mini(){let s=Math.min(180,W*.22),ox=W-s-18,oy=H-s-18,cs=s/mw;ctx.fillStyle='rgba(0,0,0,.45)';ctx.fillRect(ox-8,oy-8,s+16,s+16);for(let y=0;y<mh;y++)for(let x=0;x<mw;x++){let c=map[y][x];ctx.fillStyle=c=='#'?'#caa37b':('bstckdpw'.includes(c)?'#9ac':'rgba(255,255,255,.06)');ctx.fillRect(ox+x*cs,oy+y*cs,cs,cs)}ctx.fillStyle='#ffdf6e';ctx.beginPath();ctx.arc(ox+p.x*cs,oy+p.y*cs,4,0,7);ctx.fill();ctx.strokeStyle='#ffdf6e';ctx.beginPath();ctx.moveTo(ox+p.x*cs,oy+p.y*cs);ctx.lineTo(ox+(p.x+Math.cos(p.a)*1.2)*cs,oy+(p.y+Math.sin(p.a)*1.2)*cs);ctx.stroke()}
-function update(dt){let sp=(keys.Shift?.5:.28)*dt*60,fx=Math.cos(p.a),fy=Math.sin(p.a),rx=Math.cos(p.a+Math.PI/2),ry=Math.sin(p.a+Math.PI/2),mx=0,my=0;if(keys.w||keys.ArrowUp){mx+=fx;my+=fy}if(keys.s||keys.ArrowDown){mx-=fx;my-=fy}if(keys.a){mx-=rx;my-=ry}if(keys.d){mx+=rx;my+=ry}let l=Math.hypot(mx,my)||1,nx=p.x+mx/l*sp,ny=p.y+my/l*sp;if(!solid(map[p.y|0][nx|0]))p.x=nx;if(!solid(map[ny|0][p.x|0]))p.y=ny;document.getElementById('room').textContent='Raum: '+roomName()}
-let last=performance.now();function loop(t){let dt=Math.min(.04,(t-last)/1000);last=t;update(dt);draw3d();drawObjects();mini();requestAnimationFrame(loop)}requestAnimationFrame(loop);
-addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;if(e.key=='Shift')keys.Shift=true;if(e.key.toLowerCase()=='r')toggleRoof();if(e.key.toLowerCase()=='h'){showHelp=!showHelp;document.querySelector('.hud').style.display=showHelp?'block':'none';document.getElementById('hint').style.display=showHelp?'block':'none'}});addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false;if(e.key=='Shift')keys.Shift=false});canvas.onclick=()=>canvas.requestPointerLock&&canvas.requestPointerLock();addEventListener('mousemove',e=>{if(document.pointerLockElement===canvas)p.a+=e.movementX*.0025});function toggleRoof(){roof=!roof}
-let touches={};addEventListener('touchstart',e=>{for(const t of e.changedTouches)touches[t.identifier]={x:t.clientX,y:t.clientY,sx:t.clientX,sy:t.clientY}}, {passive:false});addEventListener('touchmove',e=>{e.preventDefault();for(const t of e.changedTouches){let o=touches[t.identifier];if(!o)continue;let dx=t.clientX-o.sx,dy=t.clientY-o.sy;if(o.sx<W/2){keys.w=dy<-18;keys.s=dy>18;keys.a=dx<-18;keys.d=dx>18}else{p.a+=dx*.004;o.sx=t.clientX}}},{passive:false});addEventListener('touchend',e=>{keys.w=keys.s=keys.a=keys.d=false;for(const t of e.changedTouches)delete touches[t.identifier]});
-</script></body></html>
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+<title>3D-Wohnung Walkthrough</title>
+<style>
+  html,body{margin:0;height:100%;overflow:hidden;background:#05070b;color:white;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial}
+  #app{position:fixed;inset:0} canvas{display:block;width:100%;height:100%}
+  .panel{position:fixed;left:14px;top:12px;max-width:360px;padding:12px 14px;border-radius:16px;background:rgba(8,12,18,.58);border:1px solid rgba(255,255,255,.16);backdrop-filter:blur(12px);font-size:13px;line-height:1.42;box-shadow:0 12px 40px rgba(0,0,0,.26)}
+  .panel b{font-size:15px}.pill{display:inline-block;margin-top:7px;padding:5px 8px;border-radius:999px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.14)}
+  #start{position:fixed;inset:0;display:grid;place-items:center;background:radial-gradient(circle at 50% 35%,rgba(74,107,150,.33),rgba(4,6,10,.94));z-index:5}
+  .card{width:min(92vw,520px);padding:24px;border-radius:26px;background:rgba(12,16,24,.76);border:1px solid rgba(255,255,255,.16);box-shadow:0 25px 80px rgba(0,0,0,.42);text-align:center;backdrop-filter:blur(16px)}
+  .card h1{margin:0 0 10px;font-size:30px}.card p{color:#d8e1ed;margin:8px 0 18px}.card button,.btn{border:0;border-radius:999px;background:#f0d186;color:#16130a;font-weight:800;padding:13px 18px;font-size:15px}
+  #cross{position:fixed;left:50%;top:50%;width:8px;height:8px;margin:-4px;opacity:.5;pointer-events:none}#cross:before,#cross:after{content:"";position:absolute;background:white;border-radius:4px}#cross:before{left:3px;top:0;width:2px;height:8px}#cross:after{top:3px;left:0;width:8px;height:2px}
+  .joy{position:fixed;bottom:32px;width:118px;height:118px;border-radius:50%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);display:none;pointer-events:none}.joy:after{content:"";position:absolute;left:43px;top:43px;width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.22)}.joy.l{left:22px}.joy.r{right:22px}
+  #mini{position:fixed;right:14px;top:12px;width:150px;height:110px;border-radius:16px;background:rgba(8,12,18,.58);border:1px solid rgba(255,255,255,.15);backdrop-filter:blur(12px)}
+  @media(pointer:coarse){.joy{display:block}.panel{font-size:12px;max-width:300px}.card h1{font-size:24px}#mini{display:none}}
+</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/gh/mrdoob/three.js@r160/build/three.module.js"}}</script>
+</head>
+<body>
+<div id="app"></div>
+<div id="start"><div class="card"><h1>Begehbare Wohnung</h1><p>Neue Version mit echten Räumen, Möbeln, Licht, Fenstern, Küche, Bad, Schlafzimmer, Wohnzimmer, Büro und Balkon. Verwendet die freie Open-Source-Bibliothek Three.js von GitHub.</p><button id="startBtn">Wohnung betreten</button><p style="font-size:12px;opacity:.78">PC: WASD laufen · Maus schauen · Shift sprinten · M Menü<br>Handy: links bewegen · rechts schauen</p></div></div>
+<div class="panel" id="hud"><b>3D-Wohnung Walkthrough</b><br><span id="room">Raum: Wohnzimmer</span><br><span class="pill">WASD · Maus · Shift · M</span></div>
+<div id="cross"></div><canvas id="mini"></canvas><div class="joy l"></div><div class="joy r"></div>
+<script type="module">
+import * as THREE from 'three';
+
+const app=document.getElementById('app');
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x9db7d4);
+scene.fog=new THREE.Fog(0x9db7d4,18,48);
+const camera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,0.04,80);
+const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;app.appendChild(renderer.domElement);
+
+function mat(c,rough=.72,metal=0){return new THREE.MeshStandardMaterial({color:c,roughness:rough,metalness:metal});}
+function canvasTex(kind){const c=document.createElement('canvas');c.width=c.height=256;const g=c.getContext('2d');if(kind==='wood'){g.fillStyle='#8c6239';g.fillRect(0,0,256,256);for(let i=0;i<18;i++){g.fillStyle=i%2?'rgba(255,220,160,.10)':'rgba(60,30,10,.10)';g.fillRect(i*16,0,10,256);g.strokeStyle='rgba(40,20,8,.22)';g.beginPath();g.moveTo(i*16+4,0);for(let y=0;y<256;y+=18)g.lineTo(i*16+4+Math.sin(y*.06+i)*5,y);g.stroke()}}else if(kind==='tile'){g.fillStyle='#d9d4c8';g.fillRect(0,0,256,256);g.strokeStyle='#a9a59d';g.lineWidth=3;for(let i=0;i<=256;i+=64){g.beginPath();g.moveTo(i,0);g.lineTo(i,256);g.moveTo(0,i);g.lineTo(256,i);g.stroke()}for(let i=0;i<35;i++){g.fillStyle='rgba(255,255,255,.16)';g.fillRect(Math.random()*256,Math.random()*256,2+Math.random()*4,2)}}else if(kind==='fabric'){g.fillStyle='#7f2f37';g.fillRect(0,0,256,256);for(let y=0;y<256;y+=8){g.fillStyle=y%16?'rgba(255,255,255,.05)':'rgba(0,0,0,.07)';g.fillRect(0,y,256,4)}}else{g.fillStyle='#efe7da';g.fillRect(0,0,256,256);for(let i=0;i<200;i++){g.fillStyle='rgba(0,0,0,.025)';g.fillRect(Math.random()*256,Math.random()*256,1,1)}}const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.colorSpace=THREE.SRGBColorSpace;return t;}
+const texWood=canvasTex('wood'),texTile=canvasTex('tile'),texFabric=canvasTex('fabric'),texWall=canvasTex('wall');texWood.repeat.set(8,5);texTile.repeat.set(4,4);texFabric.repeat.set(2,2);texWall.repeat.set(6,3);
+const M={wall:new THREE.MeshStandardMaterial({map:texWall,color:0xf4eadc,roughness:.92}),floor:new THREE.MeshStandardMaterial({map:texWood,roughness:.78}),tile:new THREE.MeshStandardMaterial({map:texTile,roughness:.62}),dark:mat(0x20242b),white:mat(0xf3f0e8),wood:mat(0x8a5a34),wood2:mat(0xc79355),black:mat(0x050505),metal:mat(0x9ba3a6,.34,.45),glass:new THREE.MeshPhysicalMaterial({color:0xb9ddff,transparent:true,opacity:.32,roughness:.05,metalness:0,transmission:.25}),sofa:new THREE.MeshStandardMaterial({map:texFabric,color:0x88404a,roughness:.9}),rug:new THREE.MeshStandardMaterial({map:texFabric,color:0x863545,roughness:.95}),plant:mat(0x2f7a4c),pot:mat(0x8d6048),water:mat(0xb6d4e7,.38)};
+
+const colliders=[];const roomMeshes=[];
+function box(n,x,y,z,w,h,d,material=M.wood,shadow=true,collide=false){const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);mesh.position.set(x,y,z);mesh.name=n;mesh.castShadow=shadow;mesh.receiveShadow=true;scene.add(mesh);if(collide)colliders.push({x,z,w,d});return mesh;}
+function cyl(n,x,y,z,r,h,material=M.wood,seg=24){const mesh=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,seg),material);mesh.position.set(x,y,z);mesh.castShadow=true;mesh.receiveShadow=true;scene.add(mesh);return mesh;}
+function plane(n,x,y,z,w,d,material,rotX=-Math.PI/2){const mesh=new THREE.Mesh(new THREE.PlaneGeometry(w,d),material);mesh.position.set(x,y,z);mesh.rotation.x=rotX;mesh.receiveShadow=true;scene.add(mesh);return mesh;}
+function wall(x,z,w,d,h=3){return box('Wand',x,h/2,z,w,h,d,M.wall,true,true)}
+function lowWall(x,z,w,d,h=.95){return box('Balkongeländer',x,h/2,z,w,h,d,M.white,true,true)}
+function door(x,z,rot=0){const m=box('Tür',x,1.05,z,.78,2.1,.06,mat(0x7a4d2b),true,false);m.rotation.y=rot;return m}
+function windowObj(x,z,w=1.7,rot=0){const frame=mat(0xf8f8f3);box('Fensterbank',x,.78,z,w+.25,.08,.14,frame);const gl=box('Fenster',x,1.65,z,w,1.25,.04,M.glass,false,false);gl.rotation.y=rot;box('Fensterrahmen',x,1.65,z,w+.12,.07,.07,frame);return gl}
+function labelText(text,x,z){const c=document.createElement('canvas');c.width=512;c.height=128;const g=c.getContext('2d');g.fillStyle='rgba(255,255,255,.0)';g.fillRect(0,0,512,128);g.fillStyle='#2c2c2c';g.font='bold 44px system-ui';g.textAlign='center';g.fillText(text,256,76);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;const s=new THREE.Sprite(new THREE.SpriteMaterial({map:t,transparent:true}));s.position.set(x,2.75,z);s.scale.set(2.8,.7,1);scene.add(s)}
+
+// Bodenflächen mit echten Bereichen
+plane('Wohnzimmerboden',-3.8,0,-2.0,9.6,7.0,M.floor);roomMeshes.push(['Wohnzimmer',-8.4,1.3,-5.6,1.6]);
+plane('Küchenfliesen',3.3,.006,-2.2,4.7,6.6,M.tile);roomMeshes.push(['Küche',1.0,5.9,-5.6,1.4]);
+plane('Schlafzimmerboden',-5.2,.006,3.5,6.4,4.0,M.floor);roomMeshes.push(['Schlafzimmer',-8.4,-1.8,1.55,5.55]);
+plane('Badfliesen',.4,.01,3.55,3.7,4.0,M.tile);roomMeshes.push(['Bad',-1.55,2.35,1.55,5.55]);
+plane('Arbeitszimmerboden',5.6,.006,2.7,4.5,5.6,M.floor);roomMeshes.push(['Arbeitszimmer',3.15,8.05,-.5,5.55]);
+plane('Flur',1.2,.012,.15,2.2,2.8,M.floor);roomMeshes.push(['Flur',.0,2.35,-1.2,1.55]);
+plane('Balkon',5.6,.02,-5.55,4.6,1.5,new THREE.MeshStandardMaterial({color:0xb9b0a2,roughness:.86}));roomMeshes.push(['Balkon',3.1,8.0,-6.4,-4.75]);
+
+// Außen- und Innenwände mit Öffnungen
+wall(-8.55,0, .18,11.1); wall(8.15,0,.18,11.1); wall(-.2,5.65,16.9,.18); wall(-.4,-6.45,12.2,.18); wall(5.6,-4.72,4.9,.16);
+lowWall(5.6,-6.45,4.9,.16,1.05); lowWall(3.15,-5.6,.16,1.65,1.05); lowWall(8.05,-5.6,.16,1.65,1.05);
+wall(-2.0,1.55,13.1,.16); wall(2.35,2.45,.16,6.4); wall(-2.1,3.55,.16,4.15); wall(3.1,.6,.16,1.95); wall(3.1,4.55,.16,2.0); wall(.15,1.55,1.2,.16); wall(1.8,1.55,1.0,.16);
+door(-.6,1.48,0); door(2.35,.05,Math.PI/2); door(2.35,3.25,Math.PI/2); door(3.12,1.52,Math.PI/2);
+windowObj(-8.48,-2.8,2.4,Math.PI/2); windowObj(-5.3,5.56,2.2,0); windowObj(.3,5.56,1.6,0); windowObj(6.3,5.56,1.9,0); windowObj(5.55,-4.74,2.5,0);
+
+// Decke, Leisten, Atmosphäre
+box('Decke',-.25,3.04,0,16.9,.08,12.3,mat(0xf6f0e6),false,false);box('Sockelleiste hinten',-.25,.12,5.53,16.7,.08,.08,mat(0xd8c7b1));box('Sockelleiste vorn',-.25,.12,-6.35,16.7,.08,.08,mat(0xd8c7b1));
+
+// Wohnzimmer
+plane('Teppich',-5.3,.03,-2.15,3.8,2.45,M.rug);box('Sofa Sitz',-6.2,.43,-2.4,3.1,.52,1.05,M.sofa);box('Sofa Rücken',-6.2,.95,-2.93,3.25,1.0,.24,M.sofa);box('Sofa Lehne L',-7.9,.72,-2.4,.25,.78,1.12,M.sofa);box('Sofa Lehne R',-4.5,.72,-2.4,.25,.78,1.12,M.sofa);box('Kissen 1',-7.1,.86,-2.93,.62,.38,.13,mat(0xe2d4c8));box('Kissen 2',-6.25,.86,-2.93,.62,.38,.13,mat(0xd7a7a1));box('Kissen 3',-5.42,.86,-2.93,.62,.38,.13,mat(0xc2c9d6));box('Couchtisch',-5.8,.34,-1.1,2.1,.18,.92,M.wood2);cyl('Tischbein',-6.62,.16,-1.42,.055,.32,M.metal);cyl('Tischbein',-4.98,.16,-1.42,.055,.32,M.metal);cyl('Tischbein',-6.62,.16,-.78,.055,.32,M.metal);cyl('Tischbein',-4.98,.16,-.78,.055,.32,M.metal);
+box('TV Board',-8.0,.38,.25,.78,.48,2.4,M.wood);box('TV Bildschirm',-8.43,1.25,.25,.08,1.35,2.2,M.black);box('Soundbar',-8.39,.72,.25,.08,.09,1.4,M.dark);box('Bücherregal',-7.95,1.15,-4.65,.75,2.15,1.2,M.wood);for(let i=0;i<5;i++)box('Regalboden',-7.55,.35+i*.38,-4.65,.08,.04,1.08,M.wood2);for(let i=0;i<12;i++)box('Buch',-7.46,.42+(i%5)*.38,-5.12+(i%4)*.28,.08,.26,.08,mat([0x8b3a3a,0x305a8b,0x3f7d4d,0xb38b36][i%4]));
+box('Stehlampe Fuß',-4.05,.06,-4.15,.5,.05,.5,M.metal);cyl('Stehlampe Stange',-4.05,.85,-4.15,.035,1.55,M.metal);cyl('Lampenschirm',-4.05,1.72,-4.15,.32,.38,mat(0xf2d998),32);
+
+// Küche und Essen
+box('Küchenzeile unten',1.35,.43,-5.55,3.25,.86,.55,M.wood);box('Arbeitsplatte',1.35,.91,-5.55,3.35,.12,.65,mat(0x2b2b2a));box('Oberschränke',1.35,1.95,-5.63,3.25,.78,.42,mat(0xd8c6a7));box('Herd',.7,.98,-5.25,.75,.04,.5,M.black);for(let i=0;i<4;i++)cyl('Kochfeld',.48+(i%2)*.43,1.03,-5.42+(i>1?0.28:0),.12,.02,M.metal,32);box('Spüle',1.72,.98,-5.25,.78,.06,.45,M.metal);cyl('Wasserhahn',1.72,1.16,-5.43,.035,.35,M.metal);box('Dunstabzug',.72,1.52,-5.6,.9,.24,.5,M.metal);box('Kühlschrank',3.1,1.1,-5.35,.92,2.2,.68,mat(0xe9edf0));box('Kühlschrank Griff',2.6,1.15,-4.98,.06,1.3,.05,M.metal);box('Kücheninsel',2.65,.55,-2.95,1.45,1.1,.9,M.wood2);box('Inselplatte',2.65,1.13,-2.95,1.6,.12,1.05,mat(0x393533));for(let i=0;i<2;i++){cyl('Barhocker Fuß',2.05+i*1.15,.24,-1.9,.18,.08,M.metal);cyl('Barhocker Stange',2.05+i*1.15,.58,-1.9,.04,.64,M.metal);cyl('Barhocker Sitz',2.05+i*1.15,.9,-1.9,.28,.12,mat(0x6b3f2a),32)}
+box('Esstisch',4.95,.75,-2.95,1.9,.15,1.2,M.wood2);for(let sx of [-.72,.72])for(let sz of [-.42,.42])cyl('Tischbein',4.95+sx,.36,-2.95+sz,.045,.72,M.wood);for(let i=0;i<4;i++){let x=4.0+(i%2)*1.9,z=-3.72+(i>1?1.55:0);box('Stuhl Sitz',x,.46,z,.55,.12,.5,mat(0x78624e));box('Stuhl Rücken',x,.88,z+(i>1?-0.28:.28),.55,.75,.08,mat(0x78624e))}
+
+// Schlafzimmer
+plane('Schlafzimmerteppich',-5.25,.03,2.95,3.7,2.2,new THREE.MeshStandardMaterial({map:texFabric,color:0x505f78,roughness:.95}));box('Bettgestell',-5.25,.34,3.55,3.05,.45,2.05,M.wood);box('Matratze',-5.25,.67,3.55,2.86,.36,1.84,mat(0xf2efe7));box('Decke',-5.25,.91,3.88,2.9,.18,1.15,mat(0x627b96));box('Kissen L',-5.92,.95,2.75,.8,.22,.45,mat(0xf7f1e8));box('Kissen R',-4.58,.95,2.75,.8,.22,.45,mat(0xf7f1e8));box('Kopfteil',-5.25,1.05,2.42,3.1,1.15,.18,M.wood);box('Nachttisch L',-7.1,.45,2.6,.62,.55,.5,M.wood2);box('Nachttisch R',-3.4,.45,2.6,.62,.55,.5,M.wood2);cyl('Nachttischlampe L',-7.1,.98,2.6,.18,.35,mat(0xf1d48a),24);cyl('Nachttischlampe R',-3.4,.98,2.6,.18,.35,mat(0xf1d48a),24);box('Kleiderschrank',-8.12,1.23,4.15,.62,2.35,1.9,mat(0xc49a6c));for(let i=0;i<3;i++)box('Schranktür',-7.78,1.23,3.45+i*.64,.04,2.1,.5,mat(0xd0ad7e));box('Kommode',-2.55,.55,4.92,1.3,1.1,.55,M.wood2);box('Spiegel',-2.55,1.7,5.53,1.1,1.1,.04,M.glass,false,false);
+
+// Bad
+box('Badewanne',-.85,.36,4.55,1.75,.72,.86,mat(0xf5f6f3));box('Wannenmulde',-.85,.76,4.55,1.42,.08,.54,M.water,false,false);box('Waschtisch',1.38,.48,4.75,1.05,.82,.5,mat(0xdad7cf));cyl('Waschbecken',1.38,.94,4.75,.34,.12,mat(0xffffff),32);box('Badspiegel',1.38,1.72,5.54,1.05,1.05,.04,M.glass,false,false);cyl('Toilette',1.34,.43,2.45,.36,.38,mat(0xf6f6f2),32);box('Toilettenkasten',1.34,.9,2.15,.74,.62,.22,mat(0xf6f6f2));box('Duschglas',-.15,1.05,2.0,.06,2.1,.95,M.glass,false,false);box('Handtuch',-.35,1.2,5.52,.72,.55,.05,mat(0x8db3c7));for(let i=0;i<3;i++)box('Badregal',-1.6,.65+i*.45,2.25,.55,.05,.75,M.wood2);
+
+// Arbeitszimmer
+plane('Büroteppich',5.55,.03,2.25,3.2,2.3,new THREE.MeshStandardMaterial({map:texFabric,color:0x5b5848,roughness:.95}));box('Schreibtisch',5.45,.76,4.75,2.25,.16,.82,M.wood2);box('Monitor',5.45,1.24,4.34,1.0,.62,.06,M.black);box('Monitorbild',5.45,1.24,4.305,.86,.48,.025,mat(0x3d6d99));box('Tastatur',5.2,.88,4.78,.72,.04,.22,M.black);box('Maus',5.95,.89,4.8,.18,.04,.25,M.black);cyl('Bürostuhl Fuß',5.45,.28,3.55,.32,.08,M.metal,24);cyl('Bürostuhl Stange',5.45,.55,3.55,.045,.52,M.metal);box('Bürostuhl Sitz',5.45,.82,3.55,.72,.18,.62,mat(0x30343c));box('Bürostuhl Rücken',5.45,1.25,3.25,.72,.78,.14,mat(0x30343c));box('Aktenregal',7.65,1.05,1.7,.62,2.1,1.65,M.wood);for(let i=0;i<4;i++)box('Regalbrett',7.28,.37+i*.44,1.7,.05,.04,1.55,M.wood2);for(let i=0;i<18;i++)box('Ordner',7.22,.45+(i%4)*.44,1.0+(i%6)*.25,.07,.32,.1,mat([0x334c77,0x7b3434,0x2f704b,0x77703b][i%4]));box('Lesesessel',6.85,.45,-.05,.82,.55,.72,mat(0x3d4e63));box('Lesesessel Rücken',6.85,.9,-.38,.85,.82,.14,mat(0x3d4e63));
+
+// Balkon und Deko
+box('Balkonstuhl 1',4.55,.42,-5.92,.55,.12,.55,mat(0x756b60));box('Balkonstuhl Rücken 1',4.55,.82,-6.18,.55,.7,.08,mat(0x756b60));box('Balkonstuhl 2',6.55,.42,-5.92,.55,.12,.55,mat(0x756b60));box('Balkonstuhl Rücken 2',6.55,.82,-6.18,.55,.7,.08,mat(0x756b60));cyl('Balkontisch',5.55,.55,-5.82,.42,.08,M.wood2,32);
+function plant(x,z,s=1){cyl('Topf',x,.26,z,.22*s,.42*s,M.pot,24);const a=new THREE.Group();for(let i=0;i<7;i++){const leaf=new THREE.Mesh(new THREE.SphereGeometry(.18*s,12,8),M.plant);leaf.position.set(Math.sin(i)*.18*s,.55*s+Math.random()*.22*s,Math.cos(i)*.18*s);leaf.scale.set(1,.35,1.6);leaf.rotation.y=i;leaf.castShadow=true;a.add(leaf)}a.position.set(x,0,z);scene.add(a)}
+plant(-3.1,-4.85,1.1);plant(7.35,-4.95,.9);plant(4.0,-5.65,.85);plant(7.5,4.8,1.0);plant(-7.8,1.2,.8);
+function picture(x,z,w,h,color,rot=0){const fr=box('Bilderrahmen',x,1.65,z,w+.12,h+.12,.045,mat(0x3b2a1e),false,false);fr.rotation.y=rot;const p=box('Bild',x,1.65,z-.026,w,h,.025,mat(color),false,false);p.rotation.y=rot}
+picture(-8.45,-.9,.08,1.0,0x8bb5d9,Math.PI/2);picture(-8.45,-1.8,.08,1.0,0xd1a078,Math.PI/2);picture(-5.2,5.55,1.3,.72,0x9dbb8e,0);picture(5.9,5.55,1.1,.7,0xd7b17d,0);picture(2.28,3.5,.08,.8,0x9f7aa9,Math.PI/2);
+labelText('Wohnzimmer',-5.8,-.2);labelText('Küche',3.4,-1.1);labelText('Schlafzimmer',-5.2,5.1);labelText('Bad',.45,5.1);labelText('Arbeitszimmer',5.6,5.1);
+
+// Licht
+scene.add(new THREE.HemisphereLight(0xddeeff,0x6b4c39,1.25));const sun=new THREE.DirectionalLight(0xfff0cf,1.6);sun.position.set(-5,9,-6);sun.castShadow=true;sun.shadow.mapSize.set(1536,1536);sun.shadow.camera.near=.1;sun.shadow.camera.far=30;sun.shadow.camera.left=-13;sun.shadow.camera.right=13;sun.shadow.camera.top=13;sun.shadow.camera.bottom=-13;scene.add(sun);
+function bulb(x,z,int=1.4){const l=new THREE.PointLight(0xffe4ad,int,7,1.5);l.position.set(x,2.65,z);l.castShadow=false;scene.add(l);cyl('Deckenlampe',x,2.87,z,.28,.15,mat(0xf6dfad),32)}
+bulb(-5,-2,1.7);bulb(2.7,-3.4,1.4);bulb(-5.1,3.55,1.2);bulb(.3,3.6,1.1);bulb(5.6,2.7,1.2);
+
+// Steuerung
+let pos=new THREE.Vector3(-4.9,1.62,-3.9),yaw=.62,pitch=0,started=false;camera.position.copy(pos);const keys={};function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
+function isColliding(x,z){const r=.28;for(const c of colliders){if(x>c.x-c.w/2-r&&x<c.x+c.w/2+r&&z>c.z-c.d/2-r&&z<c.z+c.d/2+r)return true}return false}
+function currentRoom(){for(const r of roomMeshes){if(pos.x>=r[1]&&pos.x<=r[2]&&pos.z>=r[3]&&pos.z<=r[4])return r[0]}return 'Wohnung'}
+addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;if(e.key.toLowerCase()==='m'){document.getElementById('hud').style.display=document.getElementById('hud').style.display==='none'?'block':'none'}});addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
+renderer.domElement.addEventListener('click',()=>{if(started&&renderer.domElement.requestPointerLock)renderer.domElement.requestPointerLock()});addEventListener('mousemove',e=>{if(document.pointerLockElement===renderer.domElement){yaw-=e.movementX*.0022;pitch=clamp(pitch-e.movementY*.0022,-1.25,1.25)}});
+document.getElementById('startBtn').onclick=()=>{started=true;document.getElementById('start').style.display='none';if(matchMedia('(pointer:fine)').matches)renderer.domElement.requestPointerLock?.()};
+let touchL=null,touchR=null,moveVec={x:0,y:0};addEventListener('touchstart',e=>{started=true;document.getElementById('start').style.display='none';for(const t of e.changedTouches){if(t.clientX<innerWidth/2&&!touchL)touchL={id:t.identifier,x:t.clientX,y:t.clientY};else if(!touchR)touchR={id:t.identifier,x:t.clientX,y:t.clientY}}},{passive:false});addEventListener('touchmove',e=>{e.preventDefault();for(const t of e.changedTouches){if(touchL&&t.identifier===touchL.id){moveVec.x=clamp((t.clientX-touchL.x)/48,-1,1);moveVec.y=clamp((t.clientY-touchL.y)/48,-1,1)}if(touchR&&t.identifier===touchR.id){yaw-=(t.clientX-touchR.x)*.006;pitch=clamp(pitch-(t.clientY-touchR.y)*.006,-1.15,1.15);touchR.x=t.clientX;touchR.y=t.clientY}}},{passive:false});addEventListener('touchend',e=>{for(const t of e.changedTouches){if(touchL&&t.identifier===touchL.id){touchL=null;moveVec.x=moveVec.y=0}if(touchR&&t.identifier===touchR.id)touchR=null}});
+
+const mini=document.getElementById('mini'),mctx=mini.getContext('2d');function drawMini(){const w=mini.width=150*devicePixelRatio,h=mini.height=110*devicePixelRatio;mctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);mctx.clearRect(0,0,150,110);mctx.fillStyle='rgba(255,255,255,.07)';mctx.fillRect(8,8,134,94);function sx(x){return 8+(x+8.6)/16.8*134}function sz(z){return 8+(z+6.5)/12.1*94}mctx.strokeStyle='rgba(255,255,255,.45)';mctx.lineWidth=2;for(const c of colliders){mctx.strokeRect(sx(c.x-c.w/2),sz(c.z-c.d/2),c.w/16.8*134,c.d/12.1*94)}mctx.fillStyle='#ffe08a';mctx.beginPath();mctx.arc(sx(pos.x),sz(pos.z),4,0,7);mctx.fill();mctx.strokeStyle='#ffe08a';mctx.beginPath();mctx.moveTo(sx(pos.x),sz(pos.z));mctx.lineTo(sx(pos.x+Math.sin(yaw)*1.1),sz(pos.z+Math.cos(yaw)*1.1));mctx.stroke()}
+let last=performance.now();function animate(t){const dt=Math.min(.045,(t-last)/1000);last=t;let speed=(keys.shift?4.2:2.4)*dt;let f=new THREE.Vector3(Math.sin(yaw),0,Math.cos(yaw)),r=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw));let mx=0,mz=0;if(keys.w||keys.arrowup){mx+=f.x;mz+=f.z}if(keys.s||keys.arrowdown){mx-=f.x;mz-=f.z}if(keys.a){mx-=r.x;mz-=r.z}if(keys.d){mx+=r.x;mz+=r.z}if(moveVec.y){mx+=f.x*(-moveVec.y);mz+=f.z*(-moveVec.y)}if(moveVec.x){mx+=r.x*(moveVec.x);mz+=r.z*(moveVec.x)}let len=Math.hypot(mx,mz);if(len){mx/=len;mz/=len;let nx=pos.x+mx*speed,nz=pos.z+mz*speed;if(!isColliding(nx,pos.z))pos.x=nx;if(!isColliding(pos.x,nz))pos.z=nz}camera.position.copy(pos);camera.rotation.order='YXZ';camera.rotation.y=yaw;camera.rotation.x=pitch;document.getElementById('room').textContent='Raum: '+currentRoom();drawMini();renderer.render(scene,camera);requestAnimationFrame(animate)}requestAnimationFrame(animate);
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+</script>
+</body>
+</html>
