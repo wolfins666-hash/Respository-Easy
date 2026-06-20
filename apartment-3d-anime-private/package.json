@@ -1,0 +1,23 @@
+{
+  "name": "apartment-3d-anime-private",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Interaktive 3D-Anime-Wohnung mit Three.js, TypeScript, Vite, mobiler Steuerung und Validierung.",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "validate": "tsx src/validation/runValidation.ts",
+    "test": "tsx src/tests/validation.test.ts && tsx src/tests/sceneSmoke.test.ts"
+  },
+  "dependencies": {
+    "three": "latest"
+  },
+  "devDependencies": {
+    "@types/three": "latest",
+    "tsx": "latest",
+    "typescript": "latest",
+    "vite": "latest",
+    "@types/node": "latest"
+  }
+}
